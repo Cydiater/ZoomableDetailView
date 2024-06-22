@@ -25,9 +25,8 @@ public struct ZoomableSquareImageViaAsyncFn: View {
     
     let animation = Animation.easeInOut(duration: 0.2)
     
-    public init(vm: ZoomableImageViewModel, loadedImage: Image? = nil, async_fn: @escaping () -> Image, id: String) {
+    public init(vm: ZoomableImageViewModel, async_fn: @escaping () async -> Image, id: String) {
         self.vm = vm
-        self.loadedImage = loadedImage
         self.async_fn = async_fn
         self.id = id
     }
