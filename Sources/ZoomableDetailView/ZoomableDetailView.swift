@@ -25,6 +25,13 @@ public struct ZoomableSquareImageViaAsyncFn: View {
     
     let animation = Animation.easeInOut(duration: 0.2)
     
+    public init(vm: ZoomableImageViewModel, loadedImage: Image? = nil, async_fn: @escaping () -> Image, id: String) {
+        self.vm = vm
+        self.loadedImage = loadedImage
+        self.async_fn = async_fn
+        self.id = id
+    }
+    
     public var body: some View {
         if let image = loadedImage {
             Color.clear
