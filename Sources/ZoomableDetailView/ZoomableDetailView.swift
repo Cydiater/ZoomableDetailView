@@ -15,7 +15,7 @@ class ZoomableImageViewModel: ObservableObject {
     }
 }
 
-struct ZoomableSquareImageViaAsyncFn: View {
+public struct ZoomableSquareImageViaAsyncFn: View {
     @ObservedObject var vm: ZoomableImageViewModel
     
     @State private var loadedImage: Image?
@@ -25,7 +25,7 @@ struct ZoomableSquareImageViaAsyncFn: View {
     
     let animation = Animation.easeInOut(duration: 0.2)
     
-    var body: some View {
+    public var body: some View {
         if let image = loadedImage {
             Color.clear
                 .aspectRatio(contentMode: .fit)
@@ -102,7 +102,7 @@ struct ZoomableSquareAsyncImage: View {
     }
 }
 
-struct WithZoomableDetailViewOverlay<Content: View>: View {
+public struct WithZoomableDetailViewOverlay<Content: View>: View {
     let content: (ZoomableImageViewModel) -> Content
     @ObservedObject var vm: ZoomableImageViewModel
     
@@ -146,7 +146,7 @@ struct WithZoomableDetailViewOverlay<Content: View>: View {
         self.vm = ZoomableImageViewModel(namespace: namespace)
     }
     
-    var body: some View {
+    public var body: some View {
         content(vm)
             .overlay {
                 ZStack {
