@@ -3,7 +3,7 @@
 
 import SwiftUI
 
-class ZoomableImageViewModel: ObservableObject {
+public class ZoomableImageViewModel: ObservableObject {
     @Published var imageSelected: Image? = nil
     @Published var imageIdSelected: String? = nil
     @Published var presentingImage = false
