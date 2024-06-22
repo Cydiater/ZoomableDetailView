@@ -141,7 +141,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
         }
     }
     
-    init(namespace: Namespace.ID, content: @escaping (ZoomableImageViewModel) -> Content) {
+    public init(namespace: Namespace.ID, content: @escaping (ZoomableImageViewModel) -> Content) {
         self.content = content
         self.vm = ZoomableImageViewModel(namespace: namespace)
     }
