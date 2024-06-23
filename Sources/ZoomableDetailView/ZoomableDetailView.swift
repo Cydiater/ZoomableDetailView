@@ -15,24 +15,59 @@ public class ZoomableImageViewModel: ObservableObject {
     }
 }
 
+struct ImageFailedToLoadView: View {
+    var body: some View {
+        ZStack {
+            Color.secondary
+            Image(systemName: "exclamationmark.icloud")
+                .font(.title)
+        }
+        .opacity(0.5)
+    }
+}
+
 public struct ZoomableSquareImageViaAsyncFn: View {
     @ObservedObject var vm: ZoomableImageViewModel
+        
+    enum FnState {
+        case not_called_yet
+        case calling
+        case finishedWith(Image)
+        case failed
+    }
     
-    @State private var loadedImage: Image?
+    @State private var state = FnState.not_called_yet
     
-    let async_fn: () async -> Image
+    let async_fn: () async -> Image?
     let id: String
     
     let animation = Animation.easeInOut(duration: 0.2)
     
-    public init(vm: ZoomableImageViewModel, async_fn: @escaping () async -> Image, id: String) {
+    public init(vm: ZoomableImageViewModel, async_fn: @escaping () async -> Image?, id: String) {
         self.vm = vm
         self.async_fn = async_fn
         self.id = id
     }
     
     public var body: some View {
-        if let image = loadedImage {
+        switch state {
+        case .not_called_yet, .calling:
+            Color.clear
+                .aspectRatio(contentMode: .fit)
+                .overlay {
+                    ProgressView()
+                        .onAppear {
+                            Task {
+                                self.state = .calling
+                                if let image = await async_fn() {
+                                    self.state = .finishedWith(image)
+                                } else {
+                                    self.state = .failed
+                                }
+                            }
+                        }
+                }
+        case .finishedWith(let image):
             Color.clear
                 .aspectRatio(contentMode: .fit)
                 .matchedGeometryEffect(id: vm.imageIdSelected == id ? "base" : id, in: vm.namespace, isSource: true)
@@ -57,13 +92,11 @@ public struct ZoomableSquareImageViaAsyncFn: View {
                         vm.imageIdSelected = id
                     }
                 }
-        } else {
-            ProgressView()
-                .onAppear {
-                    Task {
-                        let image = await async_fn()
-                        self.loadedImage = image
-                    }
+        case .failed:
+            Color.clear
+                .aspectRatio(contentMode: .fit)
+                .overlay {
+                    ImageFailedToLoadView()
                 }
         }
     }
