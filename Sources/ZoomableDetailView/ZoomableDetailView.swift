@@ -146,6 +146,8 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
     @ObservedObject var vm: ZoomableImageViewModel
     
     @State private var offset = CGSize.zero
+    @State private var dragIsTracking = false
+    
     let animation = Animation.easeInOut(duration: 0.2)
     
     var distance: Double { sqrt(offset.width * offset.width + offset.height * offset.height) }
@@ -198,26 +200,41 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                                 .ignoresSafeArea()
                                 .opacity(detailViewBackgroundOpacity)
                             
-                            Color.clear
-                                .overlay {
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: vm.presentingImage ? .fit : .fill)
-                                }
-                                .offset(offset)
-                                .scaleEffect(detailViewScaleEffect)
-                                .clipped()
-                                .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
-                                .allowsHitTesting(vm.presentingImage)
+                            if dragIsTracking {
+                                Color.clear
+                                    .overlay {
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: vm.presentingImage ? .fit : .fill)
+                                    }
+                                    .offset(offset)
+                                    .scaleEffect(detailViewScaleEffect)
+                                    .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
+                                    .allowsHitTesting(vm.presentingImage)
+                            } else {
+                                Color.clear
+                                    .overlay {
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: vm.presentingImage ? .fit : .fill)
+                                    }
+                                    .offset(offset)
+                                    .scaleEffect(detailViewScaleEffect)
+                                    .clipped()
+                                    .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
+                                    .allowsHitTesting(vm.presentingImage)
+                            }
                         }
                         .gesture(
                             DragGesture()
                                 .onChanged { value in
+                                    dragIsTracking = true
                                     if vm.presentingImage {
                                         offset = value.translation
                                     }
                                 }
                                 .onEnded { _ in
+                                    dragIsTracking = false
                                     if vm.presentingImage {
                                         if detailViewBackgroundOpacity < 0.8 {
                                             dismissDetailView()
@@ -234,7 +251,6 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                         }
                     }
                 }
-                .ignoresSafeArea()
             }
     }
 }

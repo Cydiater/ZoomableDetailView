@@ -32,7 +32,7 @@ struct ExampleView: View {
                     HStack {
                         ZoomableSquareAsyncImage(url: urls[0], vm: vm)
                         ZoomableSquareAsyncImage(url: urls[1], vm: vm)
-                        ZoomableSquareAsyncImage(url: urls[2], vm: vm)
+                        ZoomableSquareAsyncImage(url: URL(string: "https://picsum.photos/id/0/200/700")!, vm: vm)
                     }
                     Text("image-via-async-fn")
                     ZoomableSquareImageViaAsyncFn(vm: vm, async_fn: { () async in
