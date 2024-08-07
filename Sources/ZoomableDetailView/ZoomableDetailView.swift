@@ -70,7 +70,7 @@ public struct ZoomableSquareImageViaAsyncFn: View {
         case .finishedWith(let image):
             Color.clear
                 .aspectRatio(contentMode: .fit)
-                .matchedGeometryEffect(id: vm.imageIdSelected == id ? "base" : id, in: vm.namespace, isSource: true)
+                .matchedGeometryEffect(id: vm.imageIdSelected == id ? "base" : UUID().uuidString, in: vm.namespace, isSource: true)
                 .overlay {
                     image
                         .resizable()
