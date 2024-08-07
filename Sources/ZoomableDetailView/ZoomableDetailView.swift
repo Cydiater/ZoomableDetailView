@@ -112,7 +112,7 @@ struct ZoomableSquareAsyncImage: View {
     var body: some View {
         Color.clear
             .aspectRatio(contentMode: .fit)
-            .matchedGeometryEffect(id: vm.imageIdSelected == url.absoluteString ? "base" : url.absoluteString, in: vm.namespace, isSource: true)
+            .matchedGeometryEffect(id: vm.imageIdSelected == url.absoluteString ? "base" : UUID().uuidString, in: vm.namespace, isSource: true)
             .overlay {
                 AsyncImage(url: url, content: { image in
                     image
