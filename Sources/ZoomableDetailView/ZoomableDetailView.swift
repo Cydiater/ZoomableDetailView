@@ -143,7 +143,7 @@ struct ZoomableSquareAsyncImage: View {
 
 public struct WithZoomableDetailViewOverlay<Content: View>: View {
     let content: (ZoomableImageViewModel) -> Content
-    @ObservedObject var vm: ZoomableImageViewModel
+    @StateObject var vm: ZoomableImageViewModel
     
     @State private var offset = CGSize.zero
     @State private var dragIsTracking = false
@@ -184,7 +184,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
     
     public init(namespace: Namespace.ID, content: @escaping (ZoomableImageViewModel) -> Content) {
         self.content = content
-        self.vm = ZoomableImageViewModel(namespace: namespace)
+        self._vm = StateObject(wrappedValue: ZoomableImageViewModel(namespace: namespace))
     }
     
     public var body: some View {

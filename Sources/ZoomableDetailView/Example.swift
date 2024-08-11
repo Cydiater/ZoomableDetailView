@@ -55,6 +55,116 @@ struct ExampleView: View {
     }
 }
 
+class MyUITableViewController<Content: View>: UIViewController, UITableViewDelegate {
+    let tableView: UITableView
+    let dataSource: UITableViewDiffableDataSource<Int, Int>
+    
+    init(content: @escaping () -> Content) {
+        let tableView = UITableView()
+        let dataSource = UITableViewDiffableDataSource<Int, Int>(tableView: tableView, cellProvider: { tableView, indexPath, item in
+            let cell = tableView.dequeueReusableCell(withIdentifier: "swiftui-hosting", for: indexPath)
+            cell.selectionStyle = .none
+            if item == 32 {
+                cell.contentConfiguration = UIHostingConfiguration {
+                    content()
+                }
+                .margins(.all, 0)
+            } else {
+                cell.contentConfiguration = UIHostingConfiguration {
+                    let idx = item
+                    HStack {
+                        Text(idx.description)
+                            .padding(.horizontal)
+                        Spacer()
+                        Text("1")
+                            .padding(.horizontal)
+                            .italic()
+                    }
+                    .font(.title)
+                    .border(.black)
+                    .background(.blue)
+                    .padding(.horizontal)
+                    .padding(.vertical, 3)
+                }
+                .margins(.all, 0)
+            }
+            return cell
+        })
+        
+        self.tableView = tableView
+        self.dataSource = dataSource
+        
+        super.init(nibName: nil, bundle: nil)
+        
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "swiftui-hosting")
+        
+        tableView.delegate = self
+        tableView.dataSource = dataSource
+        tableView.separatorStyle = .none
+        
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        self.view.addSubview(tableView)
+        
+        view.addConstraints([
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+        ])
+        
+        var snapshot = NSDiffableDataSourceSnapshot<Int, Int>()
+        snapshot.appendSections([0])
+        snapshot.appendItems(Array(0..<2000))
+        dataSource.apply(snapshot)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+}
+
+struct MyTableView<Content: View>: UIViewControllerRepresentable {
+    typealias UIViewControllerType = MyUITableViewController<Content>
+    
+    var content: () -> Content
+    
+    func makeUIViewController(context: Context) -> UIViewControllerType {
+        let viewController = MyUITableViewController(content: content)
+        return viewController
+    }
+    
+    func updateUIViewController(_ uiViewController: UIViewControllerType, context: Context) {
+
+    }
+}
+
+
+struct ExampleView2: View {
+    @Namespace var namespace
+    
+    var body: some View {
+        WithZoomableDetailViewOverlay(namespace: namespace) { vm in
+            MyTableView {
+                HStack {
+                    ZoomableSquareAsyncImage(url: urls[0], vm: vm)
+                    ZoomableSquareAsyncImage(url: urls[1], vm: vm)
+                    ZoomableSquareAsyncImage(url: URL(string: "https://picsum.photos/id/0/200/700")!, vm: vm)
+                }
+            }
+            .ignoresSafeArea()
+        }
+    }
+}
+
 #Preview {
     ExampleView()
+}
+
+#Preview {
+    ExampleView2()
 }
