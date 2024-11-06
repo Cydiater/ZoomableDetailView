@@ -146,6 +146,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
     @StateObject var vm: ZoomableImageViewModel
     
     @State private var offset = CGSize.zero
+    @State private var zoomScale = 1.0
     @State private var dragIsTracking = false
     
     let animation = Animation.easeInOut(duration: 0.2)
@@ -182,6 +183,14 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
         }
     }
     
+    var isDragging: Bool {
+        distance > 0
+    }
+    
+    var combinedScaleEffect: Double {
+        isDragging ? detailViewScaleEffect : zoomScale
+    }
+    
     public init(namespace: Namespace.ID, content: @escaping (ZoomableImageViewModel) -> Content) {
         self.content = content
         self._vm = StateObject(wrappedValue: ZoomableImageViewModel(namespace: namespace))
@@ -208,7 +217,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                                             .aspectRatio(contentMode: vm.presentingImage ? .fit : .fill)
                                     }
                                     .offset(offset)
-                                    .scaleEffect(detailViewScaleEffect)
+                                    .scaleEffect(combinedScaleEffect)
                                     .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
                                     .allowsHitTesting(vm.presentingImage)
                             } else {
@@ -219,7 +228,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                                             .aspectRatio(contentMode: vm.presentingImage ? .fit : .fill)
                                     }
                                     .offset(offset)
-                                    .scaleEffect(detailViewScaleEffect)
+                                    .scaleEffect(combinedScaleEffect)
                                     .clipped()
                                     .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
                                     .allowsHitTesting(vm.presentingImage)
@@ -228,12 +237,18 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                         .gesture(
                             DragGesture()
                                 .onChanged { value in
+                                    if zoomScale != 1 {
+                                        return
+                                    }
                                     dragIsTracking = true
                                     if vm.presentingImage {
                                         offset = value.translation
                                     }
                                 }
                                 .onEnded { _ in
+                                    if zoomScale != 1 {
+                                        return
+                                    }
                                     dragIsTracking = false
                                     if vm.presentingImage {
                                         if detailViewBackgroundOpacity < 0.8 {
@@ -242,6 +257,19 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                                             withAnimation {
                                                 offset = CGSize.zero
                                             }
+                                        }
+                                    }
+                                }
+                        )
+                        .gesture(
+                            MagnifyGesture()
+                                .onChanged { value in
+                                    zoomScale = value.magnification
+                                }
+                                .onEnded { _ in
+                                    if zoomScale < 1.0 {
+                                        withAnimation {
+                                            zoomScale = 1.0
                                         }
                                     }
                                 }
