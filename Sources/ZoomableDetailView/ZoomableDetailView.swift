@@ -178,6 +178,9 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
             withAnimation(animation) {
                 vm.presentingImage = false
                 offset = CGSize.zero
+                zoomScale = 1.0
+                currentZoomScale = 0.0
+                scaleAnchor = .center
             } completion: {
                 vm.imageSelected = nil
                 vm.imageIdSelected = nil
