@@ -190,7 +190,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
     }
     
     var combinedScaleEffect: Double {
-        isDragging ? detailViewScaleEffect : zoomScale
+        isDragging ? detailViewScaleEffect : (zoomScale + currentZoomScale)
     }
     
     public init(namespace: Namespace.ID, content: @escaping (ZoomableImageViewModel) -> Content) {
