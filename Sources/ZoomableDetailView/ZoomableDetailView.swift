@@ -148,6 +148,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
     @State private var offset = CGSize.zero
     @State private var zoomScale = 1.0
     @State private var dragIsTracking = false
+    @State private var scaleAnchor = UnitPoint.center
     
     let animation = Animation.easeInOut(duration: 0.2)
     
@@ -217,7 +218,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                                             .aspectRatio(contentMode: vm.presentingImage ? .fit : .fill)
                                     }
                                     .offset(offset)
-                                    .scaleEffect(combinedScaleEffect)
+                                    .scaleEffect(combinedScaleEffect, anchor: scaleAnchor)
                                     .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
                                     .allowsHitTesting(vm.presentingImage)
                             } else {
@@ -228,7 +229,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                                             .aspectRatio(contentMode: vm.presentingImage ? .fit : .fill)
                                     }
                                     .offset(offset)
-                                    .scaleEffect(combinedScaleEffect)
+                                    .scaleEffect(combinedScaleEffect, anchor: scaleAnchor)
                                     .clipped()
                                     .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
                                     .allowsHitTesting(vm.presentingImage)
@@ -265,11 +266,13 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                             MagnifyGesture()
                                 .onChanged { value in
                                     zoomScale = value.magnification
+                                    scaleAnchor = value.startAnchor
                                 }
                                 .onEnded { _ in
                                     if zoomScale < 1.0 {
-                                        withAnimation {
+                                        withAnimation(animation) {
                                             zoomScale = 1.0
+                                            scaleAnchor = .center
                                         }
                                     }
                                 }
