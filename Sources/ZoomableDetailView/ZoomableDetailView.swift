@@ -147,6 +147,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
     
     @State private var offset = CGSize.zero
     @State private var zoomScale = 1.0
+    @State private var currentZoomScale = 0.0
     @State private var dragIsTracking = false
     @State private var scaleAnchor = UnitPoint.center
     
@@ -265,14 +266,15 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                         .gesture(
                             MagnifyGesture()
                                 .onChanged { value in
-                                    zoomScale = value.magnification
+                                    currentZoomScale = value.magnification - 1
                                     scaleAnchor = value.startAnchor
                                 }
                                 .onEnded { _ in
+                                    zoomScale += currentZoomScale
+                                    currentZoomScale = 0
                                     if zoomScale < 1.0 {
                                         withAnimation(animation) {
                                             zoomScale = 1.0
-                                            scaleAnchor = .center
                                         }
                                     }
                                 }
