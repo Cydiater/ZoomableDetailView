@@ -258,6 +258,9 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                                         } else {
                                             withAnimation {
                                                 offset = CGSize.zero
+                                                zoomScale = 1.0
+                                                currentZoomScale = 0.0
+                                                scaleAnchor = .center
                                             }
                                         }
                                     }
