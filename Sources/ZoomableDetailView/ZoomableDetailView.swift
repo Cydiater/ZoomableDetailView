@@ -1,6 +1,3 @@
-// The Swift Programming Language
-// https://docs.swift.org/swift-book
-
 import SwiftUI
 
 public class ZoomableImageViewModel: ObservableObject {
@@ -146,10 +143,13 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
     @StateObject var vm: ZoomableImageViewModel
     
     @State private var offset = CGSize.zero
-    @State private var zoomScale = 1.0
-    @State private var currentZoomScale = 0.0
     @State private var dragIsTracking = false
-    @State private var scaleAnchor = UnitPoint.center
+    
+    @State private var lastScaleValue = 1.0
+    @State private var scale = 1.0
+    @State private var anchor: UnitPoint = .center
+    @State private var anchorDiffX = 0.0
+    @State private var anchorDiffY = 0.0
     
     let animation = Animation.easeInOut(duration: 0.2)
     
@@ -163,6 +163,15 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
             return 0
         }
     }
+    
+    var computedAnchor: UnitPoint {
+        .init(x: anchor.x + anchorDiffX, y: anchor.y + anchorDiffY)
+    }
+    
+    var minAnchorDiffX: CGFloat { -anchor.x }
+    var maxAnchorDiffX: CGFloat { 1 - anchor.x }
+    var minAnchorDiffY: CGFloat { -anchor.y }
+    var maxAnchorDiffY: CGFloat { 1 - anchor.y }
     
     var detailViewScaleEffect: Double {
         if vm.presentingImage {
@@ -178,9 +187,9 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
             withAnimation(animation) {
                 vm.presentingImage = false
                 offset = CGSize.zero
-                zoomScale = 1.0
-                currentZoomScale = 0.0
-                scaleAnchor = .center
+                lastScaleValue = 1.0
+                scale = 1.0
+                anchor = .center
             } completion: {
                 vm.imageSelected = nil
                 vm.imageIdSelected = nil
@@ -189,11 +198,11 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
     }
     
     var isDragging: Bool {
-        distance > 0
+        scale == 1 && distance > 0
     }
     
     var combinedScaleEffect: Double {
-        isDragging ? detailViewScaleEffect : (zoomScale + currentZoomScale)
+        isDragging ? detailViewScaleEffect : scale
     }
     
     public init(namespace: Namespace.ID, content: @escaping (ZoomableImageViewModel) -> Content) {
@@ -222,7 +231,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                                             .aspectRatio(contentMode: vm.presentingImage ? .fit : .fill)
                                     }
                                     .offset(offset)
-                                    .scaleEffect(combinedScaleEffect, anchor: scaleAnchor)
+                                    .scaleEffect(combinedScaleEffect, anchor: computedAnchor)
                                     .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
                                     .allowsHitTesting(vm.presentingImage)
                             } else {
@@ -233,7 +242,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                                             .aspectRatio(contentMode: vm.presentingImage ? .fit : .fill)
                                     }
                                     .offset(offset)
-                                    .scaleEffect(combinedScaleEffect, anchor: scaleAnchor)
+                                    .scaleEffect(combinedScaleEffect, anchor: computedAnchor)
                                     .clipped()
                                     .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
                                     .allowsHitTesting(vm.presentingImage)
@@ -242,28 +251,38 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                         .gesture(
                             DragGesture()
                                 .onChanged { value in
-                                    if zoomScale != 1 {
-                                        return
-                                    }
-                                    dragIsTracking = true
-                                    if vm.presentingImage {
-                                        offset = value.translation
+                                    if scale != 1 {
+                                        anchorDiffX = -value.translation.width / UIScreen.main.bounds.width / scale
+                                        anchorDiffX = max(minAnchorDiffX, anchorDiffX)
+                                        anchorDiffX = min(maxAnchorDiffX, anchorDiffX)
+                                        anchorDiffY = -value.translation.height / UIScreen.main.bounds.height / scale
+                                        anchorDiffY = max(minAnchorDiffY, anchorDiffY)
+                                        anchorDiffY = min(maxAnchorDiffY, anchorDiffY)
+                                    } else {
+                                        dragIsTracking = true
+                                        if vm.presentingImage {
+                                            offset = value.translation
+                                        }
                                     }
                                 }
                                 .onEnded { _ in
-                                    if zoomScale != 1 {
-                                        return
-                                    }
-                                    dragIsTracking = false
-                                    if vm.presentingImage {
-                                        if detailViewBackgroundOpacity < 0.8 {
-                                            dismissDetailView()
-                                        } else {
-                                            withAnimation {
-                                                offset = CGSize.zero
-                                                zoomScale = 1.0
-                                                currentZoomScale = 0.0
-                                                scaleAnchor = .center
+                                    if scale != 1 {
+                                        anchor.x += anchorDiffX
+                                        anchor.y += anchorDiffY
+                                        anchorDiffX = 0.0
+                                        anchorDiffY = 0.0
+                                    } else {
+                                        dragIsTracking = false
+                                        if vm.presentingImage {
+                                            if detailViewBackgroundOpacity < 0.8 {
+                                                dismissDetailView()
+                                            } else {
+                                                withAnimation {
+                                                    offset = CGSize.zero
+                                                    scale = 1.0
+                                                    lastScaleValue = 0.0
+                                                    anchor = .center
+                                                }
                                             }
                                         }
                                     }
@@ -272,15 +291,19 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                         .gesture(
                             MagnifyGesture()
                                 .onChanged { value in
-                                    currentZoomScale = value.magnification - 1
-                                    scaleAnchor = value.startAnchor
+                                    if scale == 1 {
+                                        anchor = value.startAnchor
+                                    }
+                                    let delta = value.magnification / lastScaleValue
+                                    lastScaleValue = value.magnification
+                                    self.scale *= delta
                                 }
                                 .onEnded { _ in
-                                    zoomScale += currentZoomScale
-                                    currentZoomScale = 0
-                                    if zoomScale < 1.0 {
+                                    lastScaleValue = 1.0
+                                    if scale < 1.0 {
                                         withAnimation(animation) {
-                                            zoomScale = 1.0
+                                            scale = 1.0
+                                            anchor = .center
                                         }
                                     }
                                 }
