@@ -39,10 +39,10 @@ struct ExampleView: View {
                         let url = urls[3]
                         if let (imageData, _) = try? await URLSession.shared.data(from: url) {
                             if let uiImage = UIImage(data: imageData) {
-                                return Image(uiImage: uiImage)
+                                return uiImage
                             }
                         }
-                        return Image(systemName: "exclamationmark.icloud")
+                        return UIImage(systemName: "exclamationmark.icloud")
                     }, id: "image-via-async-fn")
                     .frame(width: 128)
                     ZoomableSquareImageViaAsyncFn(vm: vm, async_fn: { () async in
