@@ -185,6 +185,89 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
         self._vm = StateObject(wrappedValue: ZoomableImageViewModel(namespace: namespace))
     }
     
+    @ViewBuilder
+    func imageView(image: UIImage, proxy: GeometryProxy) -> some View {
+        Image(uiImage: image)
+            .resizable()
+            .aspectRatio(contentMode: vm.presentingImage ? .fit : .fill)
+            .offset(combinedOffset)
+            .scaleEffect(combinedScaleEffect, anchor: anchor)
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        if scale != 1 {
+                            currentOffset = CGSize(width: value.translation.width / scale, height: value.translation.height / scale)
+                        } else {
+                            dragIsTracking = true
+                            if vm.presentingImage {
+                                offset = value.translation
+                            }
+                        }
+                    }
+                    .onEnded { _ in
+                        if scale != 1 {
+                            withAnimation {
+                                offset = CGSize(width: offset.width + currentOffset.width, height: offset.height + currentOffset.height)
+                                currentOffset = .zero
+                                let scaleToFit = min(proxy.size.width / image.size.width, proxy.size.height / image.size.height)
+                                let initialImageSize = CGSize(width: image.size.width * scaleToFit, height: image.size.height * scaleToFit)
+                                let scaledImageSize = CGSize(width: initialImageSize.width * self.scale, height: initialImageSize.height * self.scale)
+                                if scaledImageSize.width < proxy.size.width {
+                                    offset.width = 0
+                                }
+                                if scaledImageSize.height < proxy.size.height {
+                                    offset.height = 0
+                                }
+                            }
+                        } else {
+                            dragIsTracking = false
+                            if vm.presentingImage {
+                                if detailViewBackgroundOpacity < 0.8 {
+                                    dismissDetailView()
+                                } else {
+                                    withAnimation {
+                                        offset = CGSize.zero
+                                        scale = 1.0
+                                        lastScaleValue = 0.0
+                                        anchor = .center
+                                    }
+                                }
+                            }
+                        }
+                    }
+            )
+            .gesture(
+                MagnifyGesture()
+                    .onChanged { value in
+                        anchor = value.startAnchor
+                        let delta = value.magnification / lastScaleValue
+                        lastScaleValue = value.magnification
+                        self.scale *= delta
+                    }
+                    .onEnded { _ in
+                        withAnimation(animation) {
+                            lastScaleValue = 1.0
+                            if scale < 1.0 {
+                                scale = 1.0
+                                anchor = .center
+                                offset = .zero
+                            } else {
+                                let scaleToFit = min(proxy.size.width / image.size.width, proxy.size.height / image.size.height)
+                                let initialImageSize = CGSize(width: image.size.width * scaleToFit, height: image.size.height * scaleToFit)
+                                let scaledImageSize = CGSize(width: initialImageSize.width * self.scale, height: initialImageSize.height * self.scale)
+                                if scaledImageSize.width > proxy.size.width {
+                                    offset.width = -(anchor.x - 0.5) * (scaledImageSize.width - initialImageSize.width) / scale
+                                }
+                                if scaledImageSize.height > proxy.size.height {
+                                    offset.height = -(anchor.y - 0.5) * (scaledImageSize.height - initialImageSize.height) / scale
+                                }
+                                anchor = .center
+                            }
+                        }
+                    }
+            )
+    }
+    
     public var body: some View {
         content(vm)
             .overlay {
@@ -202,102 +285,20 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                                 if dragIsTracking {
                                     Color.clear
                                         .overlay {
-                                            Image(uiImage: image)
-                                                .resizable()
-                                                .aspectRatio(contentMode: vm.presentingImage ? .fit : .fill)
+                                            imageView(image: image, proxy: proxy)
                                         }
-                                        .offset(combinedOffset)
-                                        .scaleEffect(combinedScaleEffect, anchor: anchor)
                                         .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
                                         .allowsHitTesting(vm.presentingImage)
                                 } else {
                                     Color.clear
                                         .overlay {
-                                            Image(uiImage: image)
-                                                .resizable()
-                                                .aspectRatio(contentMode: vm.presentingImage ? .fit : .fill)
+                                            imageView(image: image, proxy: proxy)
                                         }
-                                        .offset(combinedOffset)
-                                        .scaleEffect(combinedScaleEffect, anchor: anchor)
                                         .clipped()
                                         .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
                                         .allowsHitTesting(vm.presentingImage)
                                 }
                             }
-                            .gesture(
-                                DragGesture()
-                                    .onChanged { value in
-                                        if scale != 1 {
-                                            currentOffset = CGSize(width: value.translation.width / scale, height: value.translation.height / scale)
-                                        } else {
-                                            dragIsTracking = true
-                                            if vm.presentingImage {
-                                                offset = value.translation
-                                            }
-                                        }
-                                    }
-                                    .onEnded { _ in
-                                        if scale != 1 {
-                                            withAnimation {
-                                                offset = CGSize(width: offset.width + currentOffset.width, height: offset.height + currentOffset.height)
-                                                currentOffset = .zero
-                                                let scaleToFit = min(proxy.size.width / image.size.width, proxy.size.height / image.size.height)
-                                                let initialImageSize = CGSize(width: image.size.width * scaleToFit, height: image.size.height * scaleToFit)
-                                                let scaledImageSize = CGSize(width: initialImageSize.width * self.scale, height: initialImageSize.height * self.scale)
-                                                if scaledImageSize.width < proxy.size.width {
-                                                    offset.width = 0
-                                                }
-                                                if scaledImageSize.height < proxy.size.height {
-                                                    offset.height = 0
-                                                }
-                                            }
-                                        } else {
-                                            dragIsTracking = false
-                                            if vm.presentingImage {
-                                                if detailViewBackgroundOpacity < 0.8 {
-                                                    dismissDetailView()
-                                                } else {
-                                                    withAnimation {
-                                                        offset = CGSize.zero
-                                                        scale = 1.0
-                                                        lastScaleValue = 0.0
-                                                        anchor = .center
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                            )
-                            .gesture(
-                                MagnifyGesture()
-                                    .onChanged { value in
-                                        anchor = value.startAnchor
-                                        let delta = value.magnification / lastScaleValue
-                                        lastScaleValue = value.magnification
-                                        self.scale *= delta
-                                    }
-                                    .onEnded { _ in
-                                        withAnimation(animation) {
-                                            lastScaleValue = 1.0
-                                            if scale < 1.0 {
-                                                scale = 1.0
-                                                anchor = .center
-                                                offset = .zero
-                                            } else {
-                                                let scaleToFit = min(proxy.size.width / image.size.width, proxy.size.height / image.size.height)
-                                                let initialImageSize = CGSize(width: image.size.width * scaleToFit, height: image.size.height * scaleToFit)
-                                                let scaledImageSize = CGSize(width: initialImageSize.width * self.scale, height: initialImageSize.height * self.scale)
-                                                if scaledImageSize.width > proxy.size.width {
-                                                    offset.width = -(anchor.x - 0.5) * (scaledImageSize.width - initialImageSize.width) / scale
-                                                }
-                                                if scaledImageSize.height > proxy.size.height {
-                                                    offset.height = -(anchor.y - 0.5) * (scaledImageSize.height - initialImageSize.height) / scale
-                                                }
-                                                anchor = .center
-                                            }
-                                        }
-                                    }
-                            )
                             .onTapGesture {
                                 dismissDetailView()
                             }
