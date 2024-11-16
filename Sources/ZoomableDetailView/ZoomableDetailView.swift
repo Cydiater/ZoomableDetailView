@@ -185,6 +185,25 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
         self._vm = StateObject(wrappedValue: ZoomableImageViewModel(namespace: namespace))
     }
     
+    func resetAnchorAndOffset(image: UIImage, proxy: GeometryProxy) {
+        let scaleToFit = min(proxy.size.width / image.size.width, proxy.size.height / image.size.height)
+        let initialImageSize = CGSize(width: image.size.width * scaleToFit, height: image.size.height * scaleToFit)
+        let scaledImageSize = CGSize(width: initialImageSize.width * self.scale, height: initialImageSize.height * self.scale)
+        if scaledImageSize.width > proxy.size.width {
+            offset.width -= (anchor.x - 0.5) * (scaledImageSize.width - initialImageSize.width) / scale
+        }
+        if scaledImageSize.height > proxy.size.height {
+            offset.height -= (anchor.y - 0.5) * (scaledImageSize.height - initialImageSize.height) / scale
+        }
+        let maxAbsOffsetWidth = max((scaledImageSize.width - proxy.size.width) / 2.0 / scale, 0)
+        let maxAbsOffsetHeight = max((scaledImageSize.height - proxy.size.height) / 2.0 / scale, 0)
+        offset.width = min(offset.width, maxAbsOffsetWidth)
+        offset.width = max(offset.width, -maxAbsOffsetWidth)
+        offset.height = min(offset.height, maxAbsOffsetHeight)
+        offset.height = max(offset.height, -maxAbsOffsetHeight)
+        anchor = .center
+    }
+    
     @ViewBuilder
     func imageView(image: UIImage, proxy: GeometryProxy) -> some View {
         Image(uiImage: image)
@@ -209,15 +228,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                             withAnimation {
                                 offset = CGSize(width: offset.width + currentOffset.width, height: offset.height + currentOffset.height)
                                 currentOffset = .zero
-                                let scaleToFit = min(proxy.size.width / image.size.width, proxy.size.height / image.size.height)
-                                let initialImageSize = CGSize(width: image.size.width * scaleToFit, height: image.size.height * scaleToFit)
-                                let scaledImageSize = CGSize(width: initialImageSize.width * self.scale, height: initialImageSize.height * self.scale)
-                                if scaledImageSize.width < proxy.size.width {
-                                    offset.width = 0
-                                }
-                                if scaledImageSize.height < proxy.size.height {
-                                    offset.height = 0
-                                }
+                                resetAnchorAndOffset(image: image, proxy: proxy)
                             }
                         } else {
                             dragIsTracking = false
@@ -239,7 +250,14 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
             .gesture(
                 MagnifyGesture()
                     .onChanged { value in
-                        anchor = value.startAnchor
+                        if anchor != value.startAnchor {
+                            anchor = value.startAnchor
+                            let scaleToFit = min(proxy.size.width / image.size.width, proxy.size.height / image.size.height)
+                            let initialImageSize = CGSize(width: image.size.width * scaleToFit, height: image.size.height * scaleToFit)
+                            let scaledImageSize = CGSize(width: initialImageSize.width * self.scale, height: initialImageSize.height * self.scale)
+                            offset.width += (anchor.x - 0.5) * (scaledImageSize.width - initialImageSize.width) / scale
+                            offset.height += (anchor.y - 0.5) * (scaledImageSize.height - initialImageSize.height) / scale
+                        }
                         let delta = value.magnification / lastScaleValue
                         lastScaleValue = value.magnification
                         self.scale *= delta
@@ -252,16 +270,7 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                                 anchor = .center
                                 offset = .zero
                             } else {
-                                let scaleToFit = min(proxy.size.width / image.size.width, proxy.size.height / image.size.height)
-                                let initialImageSize = CGSize(width: image.size.width * scaleToFit, height: image.size.height * scaleToFit)
-                                let scaledImageSize = CGSize(width: initialImageSize.width * self.scale, height: initialImageSize.height * self.scale)
-                                if scaledImageSize.width > proxy.size.width {
-                                    offset.width = -(anchor.x - 0.5) * (scaledImageSize.width - initialImageSize.width) / scale
-                                }
-                                if scaledImageSize.height > proxy.size.height {
-                                    offset.height = -(anchor.y - 0.5) * (scaledImageSize.height - initialImageSize.height) / scale
-                                }
-                                anchor = .center
+                                resetAnchorAndOffset(image: image, proxy: proxy)
                             }
                         }
                     }
