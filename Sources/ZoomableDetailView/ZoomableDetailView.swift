@@ -291,22 +291,13 @@ public struct WithZoomableDetailViewOverlay<Content: View>: View {
                                     .ignoresSafeArea()
                                     .opacity(detailViewBackgroundOpacity)
                                 
-                                if dragIsTracking {
-                                    Color.clear
-                                        .overlay {
-                                            imageView(image: image, proxy: proxy)
-                                        }
-                                        .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
-                                        .allowsHitTesting(vm.presentingImage)
-                                } else {
-                                    Color.clear
-                                        .overlay {
-                                            imageView(image: image, proxy: proxy)
-                                        }
-                                        .clipped()
-                                        .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
-                                        .allowsHitTesting(vm.presentingImage)
-                                }
+                                Color.clear
+                                    .overlay {
+                                        imageView(image: image, proxy: proxy)
+                                    }
+                                    .clipped()
+                                    .matchedGeometryEffect(id: vm.presentingImage ? "enlarged" : "base", in: vm.namespace, isSource: false)
+                                    .allowsHitTesting(vm.presentingImage)
                             }
                             .onTapGesture {
                                 dismissDetailView()
